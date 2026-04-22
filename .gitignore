@@ -1,0 +1,14 @@
+*.pyc
+__pycache__/
+
+
+logs/
+
+
+*.http
+tests/
+
+.vscode/
+pid
+unsuccessful_files/
+static/images/

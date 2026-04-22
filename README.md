@@ -1,1 +1,3 @@
-# alarm_service
+# Alarm Server
+
+告警通知服務
