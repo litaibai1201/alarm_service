@@ -20,12 +20,12 @@ class ReadStatusController:
             "robotCode": self.robot_conf["robotCode"],
             "processQueryKey": self.payload["single"]["processQueryKey"],
         }
-        res = requests.get(url, headers=headers, params=data).json()
+        res = requests.get(url, headers=headers, params=data, timeout=10).json()
         msg = res.get("message")
         if msg == "不合法的access_token":
             app.config["TOKEN"] = get_access_token()
             headers["x-acs-dingtalk-access-token"] = app.config["TOKEN"]
-            res = requests.get(url, headers=headers, params=data).json()
+            res = requests.get(url, headers=headers, params=data, timeout=10).json()
         return res
 
     def read_status_group(self):
@@ -41,10 +41,10 @@ class ReadStatusController:
             "maxResults": 50,
             "nextToken": "",
         }
-        res = requests.post(url, headers=headers, json=data).json()
+        res = requests.post(url, headers=headers, json=data, timeout=10).json()
         msg = res.get("message")
         if msg == "不合法的access_token":
             app.config["TOKEN"] = get_access_token()
             headers["x-acs-dingtalk-access-token"] = app.config["TOKEN"]
-            res = requests.post(url, headers=headers, json=data).json()
+            res = requests.post(url, headers=headers, json=data, timeout=10).json()
         return res

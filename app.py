@@ -5,14 +5,11 @@
 @時間: 2023/10/19 19:09:13
 @作者: LiDong
 """
-import json
 import os
-import time
-import traceback
 from datetime import timedelta
 from threading import Thread
 
-from flask import Flask, request, g
+from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_marshmallow import Marshmallow
@@ -24,11 +21,8 @@ from common.common_method import fail_response_result
 from common.scheduler_get_token import process_get_token
 from configs.app_config import SQLALCHEMY_DATABASE_URI, port
 from configs.const_conf import ENV
-from configs.constant import conf
 from dbs.mysql_db import db
-import structlog
-# from loggers import logger
-from loggers.logger import configure_logger
+from loggers import flask_hooks
 from views.login_and_registrate_api import blp as login_and_registrate_blp
 from views.read_status_api import blp as read_status_blp
 from views.send_alarm_group_file_api import blp as send_alarm_group_file_blp
@@ -64,9 +58,7 @@ def create_app():
     app.config["JWT_SECRET_KEY"] = "Avary88!"
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(weeks=4)
     app.config["SECRET_KEY"] = "AASDFASDF"
-    # app.logger = logger
-    service_name = conf.get("service_name")
-    app.logger = structlog.get_logger("my.custom").bind(service={"name": service_name, "environment": ENV})
+
     migrate = Migrate()
     migrate.init_app(app)
     db.init_app(app)
@@ -91,64 +83,12 @@ def create_app():
     def missing_token_callback(error):
         return fail_response_result(msg="Missing Authentication Token")
 
-    @app.before_request
-    def before_request():
-        g.start_time = time.time()
-        g.req_body = request.get_data(as_text=True)
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db.session.remove()
 
-    @app.after_request
-    def after_request(resp):
-        try:
-            data = json.loads(resp.data)
-            if data.get("code", 200) == 422:
-                resp.data = json.dumps(
-                    fail_response_result(content=data.get("errors")),
-                    ensure_ascii=False,
-                )
-                resp.status = 200
-        except Exception:
-            app.logger.error(traceback.format_exc())
-
-        event = "after_request"
-        body = json.loads(resp.data)
-        status_code = resp.status_code
-        event_duration = round(time.time() - g.start_time, 3)
-
-        req_head = {k: v for k, v in request.headers.items()}
-
-        # 判断是否为 multipart/form-data（即上传文件场景）
-        if request.content_type and "multipart/form-data" in request.content_type:
-            # 为不被前置业务逻辑影响，需要重置文件流指针
-            for file in request.files.values():
-                file.stream.seek(0)
-            # 只记录表单字段 + 每个文件的 元信息（文件名 + 大小），避免把整个文件体写入日志
-            files_info = {
-                name: {"filename": file.filename,
-                       "size": len(file.read())}
-                for name, file in request.files.items()
-            }
-            # 读取了 file.read()，为不影响后续业务逻辑，需要重置文件流指针
-            for file in request.files.values():
-                file.stream.seek(0)
-
-            req_body = {
-                "form": request.form.to_dict(),
-                "files": files_info
-            }
-        else:
-            # 非文件上传请求，继续使用之前 stored 的请求体
-            req_body = getattr(g, "req_body", None)
-        try:
-            req_body = json.dumps(json.loads(req_body), ensure_ascii=False)
-        except Exception: pass
-        log_req = {"method": request.method, "path": request.path, "headers": req_head, "body": req_body}
-        log_resp = {"status_code": status_code, "body": body, "event_duration": event_duration}
-
-        if body.get("code") == "S10000":
-            app.logger.info(event, req=log_req, resp=log_resp)  # type: ignore
-        else:
-            app.logger.warning(event, req=log_req, resp=log_resp)  # type: ignore
-        return resp
+    # 注册日志钩子（自动处理 before_request / after_request / teardown_request 日志记录）
+    flask_hooks.init_app(app, db, enable_db_logging=True)
 
     api = Api(app)
     api.register_blueprint(login_and_registrate_blp)

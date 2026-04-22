@@ -33,10 +33,18 @@ class AlarmRecorModel(BaseMixinModel):
     method_to_inform = db.Column(db.String(16), nullable=False, comment="通知方式")
     service_name = db.Column(db.String(128), nullable=False, comment="服務名稱")
     content = db.Column(db.Text, nullable=False, comment="內容")
+    content_hash = db.Column(db.String(64), nullable=True, comment="內容SHA256哈希", index=True)
     webhook = db.Column(db.String(256), comment="機器人地址")
     type = db.Column(db.String(16), nullable=False, comment="消息類型")
     at_user = db.Column(db.String(1024), comment="通知人")
     remark = db.Column(db.Text, comment="備註")
+
+    __table_args__ = (
+        db.Index(
+            "ix_alarm_dedup",
+            "ip", "method_to_inform", "content_hash", "at_user", "webhook", "type", "created_at",
+        ),
+    )
 
 
 class RegistrationModel(BaseMixinModel):

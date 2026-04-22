@@ -55,7 +55,7 @@ class SendAlarmMsgController:
 
     def __send_request_get_remark(self, data, data_dict):
         url = self.payload.get("webhook")
-        rep = requests.post(url, headers=self.headers, json=data)
+        rep = requests.post(url, headers=self.headers, json=data, timeout=10)
         error_msg = rep.json().get("errmsg")
         if error_msg == "ok":
             data_dict["status"] = 1

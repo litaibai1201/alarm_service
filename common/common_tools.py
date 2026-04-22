@@ -33,9 +33,26 @@ def get_now(data=None, days=0):
 
 
 def define_exist(atuserids):
-    for at_id in atuserids:
-        res = requests.get(conf.get("check_user_url"), params={"workno": at_id}).json()
-        if not res.get("content"):
-            content = {"err_msg": f"{at_id}，此工號不存在!"}
-            return content
+    if not atuserids:
+        return {}
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    url = conf.get("check_user_url")
+
+    def check_one(at_id):
+        try:
+            res = requests.get(url, params={"workno": at_id}, timeout=5).json()
+            if not res.get("content"):
+                return at_id
+        except requests.exceptions.RequestException:
+            return at_id
+        return None
+
+    with ThreadPoolExecutor(max_workers=min(len(atuserids), 10)) as executor:
+        futures = {executor.submit(check_one, at_id): at_id for at_id in atuserids}
+        for future in as_completed(futures):
+            result = future.result()
+            if result is not None:
+                return {"err_msg": f"{result}，此工號不存在!"}
     return {}

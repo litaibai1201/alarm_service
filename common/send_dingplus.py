@@ -18,7 +18,7 @@ def get_access_token():
         # print("缓存token")
         return access_token_cache["token"]  # 有效期未到时获取缓存token
     url = f"http://10.182.179.113:8081/gettoken?appkey={app_key}&appsecret={app_secret}"
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
     if response.status_code == 200:
         result = response.json()
         access_token = result.get("access_token")

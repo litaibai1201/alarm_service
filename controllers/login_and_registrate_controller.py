@@ -23,7 +23,7 @@ class LoginController:
         self.payload = payload
 
     def login_ldap(self):
-        res = requests.post(self.url, json=self.payload, headers=self.headers)
+        res = requests.post(self.url, json=self.payload, headers=self.headers, timeout=10)
         return res.json()
 
     def get_token(self):

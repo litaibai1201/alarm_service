@@ -131,12 +131,12 @@ class SendAlarmFileController:
 
     def __send_request_get_remark(self, data, data_dict):
         url = self.url
-        res = requests.post(url, headers=self.headers, json=data).json()
+        res = requests.post(url, headers=self.headers, json=data, timeout=10).json()
         msg = res.get("message")
         if msg == "不合法的access_token":
             app.config["TOKEN"] = get_access_token()
             self.headers["x-acs-dingtalk-access-token"] = app.config["TOKEN"]
-            res = requests.post(url, headers=self.headers, json=data).json()
+            res = requests.post(url, headers=self.headers, json=data, timeout=10).json()
         if res.get("message"):
             data_dict["status"] = 2
             rsp_msg = res.get("message")

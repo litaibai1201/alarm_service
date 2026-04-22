@@ -6,17 +6,12 @@
 @作者: LiDong
 """
 import time
-import traceback
 
-from flask import current_app as app
 from sqlalchemy.dialects import mysql
 
 from dbs.mysql_db import db
 from dbs.mysql_db.model_tables import RegistrationModel
-
-# from uuid import uuid4
-
-
+from loggers import logger
 
 
 class OperRegistrationModel:
@@ -30,20 +25,18 @@ class OperRegistrationModel:
             statement = RegistrationModel.__table__.insert().values(**data)
             sql_str = str(statement.compile(dialect=mysql.dialect(), compile_kwargs={"literal_binds": True}))
 
-            # data["id"] = uuid4().hex
             db.session.add(RegistrationModel(**data))
             db.session.commit()
 
             duration = round(time.time() - start_time, 3)
-            app.logger.info(db={"statement": sql_str, "status": status, "duration": duration})  # type: ignore
+            logger.info("數據插入成功", db={"statement": sql_str, "status": status, "duration": duration})
             return True
-        except Exception:
+        except Exception as e:
             db.session.rollback()
 
             status = "fail"
             duration = round(time.time() - start_time, 3)
-            app.logger.error("數據插入失敗", db={"statement": sql_str, "status": status, "duration": duration})  # type: ignore
-            app.logger.error(traceback.format_exc())
+            logger.error("數據插入失敗", db={"statement": sql_str, "status": status, "duration": duration}, error=e)
             return False
 
     def search_token(self, service_name, service_type):

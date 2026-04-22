@@ -5,7 +5,6 @@
 @時間: 2023/12/08 16:04:28
 @作者: LiDong
 """
-from flask import current_app as app
 from flask import request
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -44,7 +43,6 @@ class LogIn(MethodView):
         if result_ldap["code"] == "S10000":
             token = lc.get_token()
             rsp_result = response_result(content={"token": token})
-            app.logger.info(f"{ip} {work_no} 登錄成功")
         else:
             rsp_result = fail_response_result(msg="帳號或密碼或園區錯誤")
         return rsp_result

@@ -23,15 +23,16 @@ class SendAlarmFile:
         return hashed_string
 
     def send_req_get_upload_media(self, file_path, send_type):
-        files = {"media": open(file_path, "rb")}
         url = self.media_url.format(self.token, send_type)
-        res = requests.post(url, files=files).json()
+        with open(file_path, "rb") as f:
+            res = requests.post(url, files={"media": f}, timeout=30).json()
         msg = res.get("errmsg")
         if msg == "不合法的access_token":
             self.token = get_access_token()
             app.config["TOKEN"] = self.token
             url = self.media_url.format(self.token, send_type)
-            res = requests.post(url, files=files).json()
+            with open(file_path, "rb") as f:
+                res = requests.post(url, files={"media": f}, timeout=30).json()
             msg = res.get("errmsg")
         if msg != "ok":
             return msg
@@ -46,7 +47,7 @@ class SendAlarmFile:
         file_path,
         orig_file_data,
     ):
-        rep = requests.post(self.url, headers=self.headers, json=data).json()
+        rep = requests.post(self.url, headers=self.headers, json=data, timeout=10).json()
         rep_query = rep.get("processQueryKey")
         if rep_query:
             data_dict["status"] = 1
@@ -68,9 +69,8 @@ class SendAlarmFile:
         if not os.path.isdir(dir_path):
             os.mkdir(dir_path)
         try:
-            file_io = io.FileIO(file_path, "w+")
-            file_io.write(file_data)
-            file_io.close()
+            with io.FileIO(file_path, "w+") as file_io:
+                file_io.write(file_data)
             return True
         except Exception:
             return False
